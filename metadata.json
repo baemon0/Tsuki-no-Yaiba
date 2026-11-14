@@ -1,0 +1,6 @@
+{
+  "name": "Tsuki no Yaiba",
+  "description": "A 2D pixel-art samurai action game set in a moonlit Japanese bamboo forest.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

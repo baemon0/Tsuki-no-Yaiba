@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@layer base {
+  html,
+  body,
+  #root {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background-color: #070a10;
+    font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+  }
+}
+
+.font-display {
+  font-family: "Cinzel", Georgia, serif;
+}
+
+.font-mono-tech {
+  font-family: "JetBrains Mono", monospace;
+}
+
+.pixel-canvas {
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-crisp-edges;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
