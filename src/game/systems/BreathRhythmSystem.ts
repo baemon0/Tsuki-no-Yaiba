@@ -25,6 +25,8 @@ export class BreathRhythmSystem implements GameSystem {
   private phase = 0;
   private sweetSpotBonus = 0;
   private damageTakenMult = 1;
+  private focusHolding = false;
+  private focusParticleAccum = 0;
 
   constructor(private getPlayerPos: () => { x: number; y: number; facing: 1 | -1 }) {}
 
@@ -87,6 +89,8 @@ export class BreathRhythmSystem implements GameSystem {
     this.breath.timer = 0;
     this.breath.duration = 0;
     this.phase = 0;
+    this.focusHolding = false;
+    this.focusParticleAccum = 0;
   }
 
   public get isCharged(): boolean {
@@ -191,32 +195,60 @@ export class BreathRhythmSystem implements GameSystem {
     const maxSweet = Math.min(0.92, diff.sweetSpotMax + this.sweetSpotBonus);
 
     if (this.breath.mode === 'oscillating') {
-      this.phase =
-        (this.phase + dt * BREATH.oscillationSpeed * diff.oscillationSpeedMult) % 2;
-      this.breath.cursor = this.phase <= 1 ? this.phase : 2 - this.phase;
+      const pos = this.getPlayerPos();
+      const inSweetSpot =
+        this.breath.cursor >= minSweet && this.breath.cursor <= maxSweet;
 
       if (input.breathPressed) {
-        const inSweetSpot =
-          this.breath.cursor >= minSweet && this.breath.cursor <= maxSweet;
-
-        const pos = this.getPlayerPos();
-
         if (inSweetSpot) {
-          const duration = BREATH.chargeDuration + modifiers.chargeDurationBonus;
-          this.breath.mode = 'charged';
-          this.breath.timer = duration;
-          this.breath.duration = duration;
-          this.addUltimateCharge(8, modifiers.ultimateChargeMult);
+          this.triggerBreathSuccess(modifiers, pos, emitAction, spawnParticles);
+          return;
+        }
+        // Begin focus inhale — holding BREATH pulls cursor smoothly into Sweet Spot!
+        this.focusHolding = true;
+        this.focusParticleAccum = 0;
+      }
 
-          emitAction({
-            type: 'breath_charge',
-            x: pos.x,
-            y: pos.y,
-            facing: pos.facing,
-            characterId: this.characterId,
-          });
-          this.spawnChargeBurst(spawnParticles, pos.x, pos.y);
+      if (this.focusHolding) {
+        if (input.breathHeld) {
+          const targetCenter = (minSweet + maxSweet) * 0.5;
+          const step = dt * 2.15;
+          if (this.breath.cursor < targetCenter) {
+            this.breath.cursor = Math.min(targetCenter, this.breath.cursor + step);
+          } else {
+            this.breath.cursor = Math.max(targetCenter, this.breath.cursor - step);
+          }
+          this.phase = this.breath.cursor;
+
+          // Swirling inhale wind particles around slayer while holding BREATH
+          this.focusParticleAccum += dt;
+          if (this.focusParticleAccum >= 0.055) {
+            this.focusParticleAccum = 0;
+            const c = this.character.colors;
+            const ang = Math.random() * Math.PI * 2;
+            const r = 16 + Math.random() * 10;
+            spawnParticles([
+              {
+                x: pos.x + Math.cos(ang) * r,
+                y: pos.y - 14 + Math.sin(ang) * (r * 0.65),
+                vx: -Math.cos(ang) * 32,
+                vy: -Math.sin(ang) * 24,
+                life: 0.25,
+                maxLife: 0.25,
+                size: 1,
+                color: Math.random() > 0.4 ? c.bright : '#e0f2fe',
+                gravityFactor: 0,
+              },
+            ]);
+          }
+
+          if (this.breath.cursor >= minSweet && this.breath.cursor <= maxSweet) {
+            this.focusHolding = false;
+            this.triggerBreathSuccess(modifiers, pos, emitAction, spawnParticles);
+          }
         } else {
+          // Released early outside the sweet spot -> mistimed tap exhaustion
+          this.focusHolding = false;
           this.breath.mode = 'exhausted';
           this.breath.timer = BREATH.exhaustDuration;
           this.breath.duration = BREATH.exhaustDuration;
@@ -230,14 +262,42 @@ export class BreathRhythmSystem implements GameSystem {
           });
           this.spawnExhaustBurst(spawnParticles, pos.x, pos.y);
         }
+        return;
       }
+
+      this.phase =
+        (this.phase + dt * BREATH.oscillationSpeed * diff.oscillationSpeedMult) % 2;
+      this.breath.cursor = this.phase <= 1 ? this.phase : 2 - this.phase;
     } else {
+      this.focusHolding = false;
       this.breath.timer = Math.max(0, this.breath.timer - dt);
       if (this.breath.timer <= 0) {
         this.breath.mode = 'oscillating';
         this.breath.duration = 0;
       }
     }
+  }
+
+  private triggerBreathSuccess(
+    modifiers: RunModifiers,
+    pos: { x: number; y: number; facing: 1 | -1 },
+    emitAction: UpdateContext['emitAction'],
+    spawnParticles: (particles: Particle[]) => void
+  ): void {
+    const duration = BREATH.chargeDuration + modifiers.chargeDurationBonus;
+    this.breath.mode = 'charged';
+    this.breath.timer = duration;
+    this.breath.duration = duration;
+    this.addUltimateCharge(8, modifiers.ultimateChargeMult);
+
+    emitAction({
+      type: 'breath_charge',
+      x: pos.x,
+      y: pos.y,
+      facing: pos.facing,
+      characterId: this.characterId,
+    });
+    this.spawnChargeBurst(spawnParticles, pos.x, pos.y);
   }
 
   public renderHUD(ctx: CanvasRenderingContext2D, elapsed: number): void {

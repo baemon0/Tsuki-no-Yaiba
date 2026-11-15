@@ -277,7 +277,7 @@ export class Samurai {
     }
 
     const standingOnPlatform = this.grounded && this.y < GROUND_Y;
-    if (standingOnPlatform && input.downHeld && input.jumpPressed) {
+    if (standingOnPlatform && (input.dropPressed || (input.downHeld && input.jumpPressed))) {
       // Drop smoothly through one-way elevated platform
       this.dropThroughTimer = 0.24;
       this.grounded = false;
@@ -391,7 +391,12 @@ export class Samurai {
         }
       }
     } else {
-      const moveDir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+      const digitalDir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+      const moveAxis =
+        input.moveAxis !== null && Math.abs(input.moveAxis) > 0.08
+          ? input.moveAxis
+          : digitalDir;
+      const moveDir = moveAxis > 0.08 ? 1 : moveAxis < -0.08 ? -1 : 0;
       if (moveDir !== 0 && this.slashPhase === 'none' && this.wallJumpLockTimer <= 0) {
         this.facing = moveDir as Facing;
       }
@@ -405,7 +410,7 @@ export class Samurai {
       const isSlashingOnGround = this.slashPhase !== 'none' && this.grounded;
       const targetVx = isSlashingOnGround
         ? 0
-        : moveDir * PHYSICS.moveSpeed * speedMult;
+        : moveAxis * PHYSICS.moveSpeed * speedMult;
 
       if (this.wallJumpLockTimer <= 0) {
         const accel = this.grounded
@@ -475,9 +480,31 @@ export class Samurai {
         this.vy *= Math.pow(PHYSICS.jumpCutMultiplier, dt * 18);
       }
 
+      let gravityScale = 1;
+      if (Math.abs(this.vy) <= PHYSICS.apexVelocityThreshold) {
+        gravityScale = input.jumpHeld ? PHYSICS.apexGravityScale : 0.78;
+      } else if (this.vy < 0) {
+        gravityScale = input.jumpHeld ? PHYSICS.ascentHeldGravityScale : 1;
+      } else {
+        gravityScale = input.jumpHeld
+          ? PHYSICS.fallHeldGravityScale
+          : PHYSICS.fallGravityScale;
+      }
+
+      if (!this.grounded && this.slashPhase !== 'none' && this.vy > 0) {
+        gravityScale *= 0.72;
+      }
+
+      const maxFall =
+        this.wallSlideDir !== 0
+          ? PHYSICS.wallSlideMaxSpeed
+          : input.jumpHeld
+            ? PHYSICS.maxHeldFallSpeed
+            : PHYSICS.maxFallSpeed;
+
       this.vy = Math.min(
-        this.wallSlideDir !== 0 ? PHYSICS.wallSlideMaxSpeed : PHYSICS.maxFallSpeed,
-        this.vy + PHYSICS.gravity * dt
+        maxFall,
+        this.vy + PHYSICS.gravity * gravityScale * dt
       );
 
       // Wall slide sparks/dust

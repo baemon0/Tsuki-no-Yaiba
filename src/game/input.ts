@@ -22,12 +22,14 @@ const ULTIMATE_CODES = new Set(['KeyC', 'KeyL']);
 export class InputManager {
   private heldCodes = new Set<string>();
   private virtualHeld = new Set<VirtualControlKey>();
+  private virtualAxisX: number | null = null;
   private prevJumpHeld = false;
   private prevSlashHeld = false;
   private prevDashHeld = false;
   private prevBreathHeld = false;
   private prevUltimateHeld = false;
 
+  private bufferedDropPress = false;
   private bufferedJumpPress = false;
   private bufferedSlashPress = false;
   private bufferedDashPress = false;
@@ -38,6 +40,24 @@ export class InputManager {
     this.target.addEventListener('keydown', this.handleKeyDown);
     this.target.addEventListener('keyup', this.handleKeyUp);
     this.target.addEventListener('blur', this.handleBlur);
+  }
+
+  public setVirtualAxis(axisX: number | null): void {
+    if (axisX === null || Math.abs(axisX) < 0.01) {
+      this.virtualAxisX = null;
+    } else {
+      this.virtualAxisX = Math.max(-1, Math.min(1, axisX));
+    }
+  }
+
+  public triggerVirtualDrop(): void {
+    this.bufferedDropPress = true;
+  }
+
+  public clearVirtualControls(): void {
+    this.virtualHeld.clear();
+    this.virtualAxisX = null;
+    this.bufferedDropPress = false;
   }
 
   public setVirtualControl(key: VirtualControlKey, isDown: boolean): void {
@@ -56,9 +76,19 @@ export class InputManager {
   }
 
   public sample(): InputSnapshot {
-    const left = this.isAnyHeld(LEFT_CODES) || this.virtualHeld.has('left');
-    const right = this.isAnyHeld(RIGHT_CODES) || this.virtualHeld.has('right');
+    const keyLeft = this.isAnyHeld(LEFT_CODES);
+    const keyRight = this.isAnyHeld(RIGHT_CODES);
+    const left = keyLeft || this.virtualHeld.has('left') || (this.virtualAxisX !== null && this.virtualAxisX < -0.18);
+    const right = keyRight || this.virtualHeld.has('right') || (this.virtualAxisX !== null && this.virtualAxisX > 0.18);
+    const moveAxis =
+      keyLeft || keyRight
+        ? null
+        : this.virtualAxisX !== null
+          ? this.virtualAxisX
+          : null;
+
     const downHeld = this.isAnyHeld(DOWN_CODES) || this.virtualHeld.has('down');
+    const dropPressed = this.bufferedDropPress;
     const jumpHeld = this.isAnyHeld(JUMP_CODES) || this.virtualHeld.has('jump');
     const slashHeld = this.isAnyHeld(SLASH_CODES) || this.virtualHeld.has('slash');
     const dashHeld = this.isAnyHeld(DASH_CODES) || this.virtualHeld.has('dash');
@@ -79,6 +109,7 @@ export class InputManager {
     this.prevBreathHeld = breathHeld;
     this.prevUltimateHeld = ultimateHeld;
 
+    this.bufferedDropPress = false;
     this.bufferedJumpPress = false;
     this.bufferedSlashPress = false;
     this.bufferedDashPress = false;
@@ -88,11 +119,14 @@ export class InputManager {
     return {
       left,
       right,
+      moveAxis,
       downHeld,
+      dropPressed,
       jumpHeld,
       jumpPressed,
       slashPressed,
       dashPressed,
+      breathHeld,
       breathPressed,
       ultimatePressed,
     };
@@ -142,11 +176,13 @@ export class InputManager {
   private handleBlur = (): void => {
     this.heldCodes.clear();
     this.virtualHeld.clear();
+    this.virtualAxisX = null;
     this.prevJumpHeld = false;
     this.prevSlashHeld = false;
     this.prevDashHeld = false;
     this.prevBreathHeld = false;
     this.prevUltimateHeld = false;
+    this.bufferedDropPress = false;
     this.bufferedJumpPress = false;
     this.bufferedSlashPress = false;
     this.bufferedDashPress = false;

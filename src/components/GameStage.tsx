@@ -3,7 +3,6 @@ import { CHARACTER_MAP, type CharacterId } from '../game/characters';
 import { GAME_HEIGHT, GAME_WIDTH } from '../game/constants';
 import { DIFFICULTIES, DIFFICULTY_MAP, type DifficultyId } from '../game/difficulty';
 import { GameEngine, type GameOverStats } from '../game/engine/GameEngine';
-import type { VirtualControlKey } from '../game/input';
 import {
   SECRET_TITLE_MAP,
   getSlayerRankProgress,
@@ -15,6 +14,7 @@ import { STORY_STAGES, type GameMode } from '../game/storyStages';
 import type { GamePhase } from '../game/types';
 import type { UpgradeCardDef, UpgradeId } from '../game/upgrades';
 import { CharacterSelectOverlay } from './CharacterSelectOverlay';
+import { TouchControlsOverlay } from './TouchControlsOverlay';
 import { UpgradeCardsOverlay } from './UpgradeCardsOverlay';
 
 interface GameStageProps {
@@ -141,13 +141,6 @@ export function GameStage({
     return getCharacterPreviewDataUrl(victoryStats.characterId);
   }, [phase, victoryStats]);
 
-  const handleTouch = (key: VirtualControlKey, isDown: boolean) => {
-    if (isDown) {
-      engineRef.current?.unlockAudio();
-    }
-    engineRef.current?.input.setVirtualControl(key, isDown);
-  };
-
   const handleConfirm = (id: CharacterId) => {
     onConfirmCharacter(id);
     canvasRef.current?.focus();
@@ -182,14 +175,14 @@ export function GameStage({
     : activeDifficulty;
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-[#050811]">
+    <div className="relative w-screen h-screen overflow-hidden bg-[#050811] touch-none select-none">
       <canvas
         ref={canvasRef}
         width={GAME_WIDTH}
         height={GAME_HEIGHT}
         tabIndex={0}
         aria-label="Tsuki no Yaiba game canvas"
-        className="pixel-canvas block w-screen h-screen object-cover outline-none"
+        className="pixel-canvas block w-screen h-screen object-cover outline-none touch-none"
       />
 
       {phase === 'TITLE_MENU' && (
@@ -588,156 +581,13 @@ export function GameStage({
         />
       )}
 
-      {/* Responsive Pixel-Art Mobile & Tablet Touch Controls */}
+      {/* Roblox-style Dynamic Floating Thumbstick + Ergonomic Bottom-Right Action Arc */}
       {phase === 'PLAYING' && showTouchControls && (
-        <>
-          {/* Bottom-Left: Left / Drop / Right / Jump */}
-          <div className="fixed bottom-8 left-2.5 sm:left-4 z-20 flex items-end gap-1.5 touch-none select-none">
-            <button
-              type="button"
-              onPointerDown={(e) => {
-                e.preventDefault();
-                handleTouch('left', true);
-              }}
-              onPointerUp={() => handleTouch('left', false)}
-              onPointerLeave={() => handleTouch('left', false)}
-              onPointerCancel={() => handleTouch('left', false)}
-              className="relative flex h-12 w-12 sm:h-13 sm:w-13 items-center justify-center border-2 border-slate-300/35 bg-[#060912]/55 font-mono-tech text-base font-bold text-slate-100 backdrop-blur-[2px] active:border-teal-300 active:bg-teal-900/65"
-              aria-label="Move Left"
-            >
-              <span className="absolute top-0.5 left-0.5 h-1 w-1 bg-slate-300/50" />
-              <span className="absolute bottom-0.5 right-0.5 h-1 w-1 bg-slate-300/50" />
-              ◀
-            </button>
-            <button
-              type="button"
-              onPointerDown={(e) => {
-                e.preventDefault();
-                handleTouch('down', true);
-              }}
-              onPointerUp={() => handleTouch('down', false)}
-              onPointerLeave={() => handleTouch('down', false)}
-              onPointerCancel={() => handleTouch('down', false)}
-              className="relative flex h-10 w-9 items-center justify-center border-2 border-slate-300/25 bg-[#060912]/50 font-mono-tech text-xs font-bold text-slate-300 backdrop-blur-[2px] active:border-cyan-300 active:bg-cyan-900/60"
-              aria-label="Hold to Drop Through Platform"
-            >
-              ▼
-            </button>
-            <button
-              type="button"
-              onPointerDown={(e) => {
-                e.preventDefault();
-                handleTouch('right', true);
-              }}
-              onPointerUp={() => handleTouch('right', false)}
-              onPointerLeave={() => handleTouch('right', false)}
-              onPointerCancel={() => handleTouch('right', false)}
-              className="relative flex h-12 w-12 sm:h-13 sm:w-13 items-center justify-center border-2 border-slate-300/35 bg-[#060912]/55 font-mono-tech text-base font-bold text-slate-100 backdrop-blur-[2px] active:border-teal-300 active:bg-teal-900/65"
-              aria-label="Move Right"
-            >
-              <span className="absolute top-0.5 left-0.5 h-1 w-1 bg-slate-300/50" />
-              <span className="absolute bottom-0.5 right-0.5 h-1 w-1 bg-slate-300/50" />
-              ▶
-            </button>
-            <button
-              type="button"
-              onPointerDown={(e) => {
-                e.preventDefault();
-                handleTouch('jump', true);
-              }}
-              onPointerUp={() => handleTouch('jump', false)}
-              onPointerLeave={() => handleTouch('jump', false)}
-              onPointerCancel={() => handleTouch('jump', false)}
-              className="relative ml-1 flex h-12 w-12 sm:h-13 sm:w-13 flex-col items-center justify-center border-2 border-emerald-300/40 bg-[#071316]/55 font-mono-tech text-slate-100 backdrop-blur-[2px] active:border-emerald-200 active:bg-emerald-800/70"
-              aria-label="Jump"
-            >
-              <span className="absolute top-0.5 right-0.5 h-1 w-1 bg-emerald-300/60" />
-              <span className="text-sm leading-none font-bold">▲</span>
-              <span className="mt-0.5 text-[8px] uppercase tracking-wider text-emerald-200">
-                Jump
-              </span>
-            </button>
-          </div>
-
-          {/* Bottom-Right: Ultimate / Breath / Dash / Slash */}
-          <div className="fixed bottom-8 right-2.5 sm:right-4 z-20 flex flex-col items-end gap-1.5 touch-none select-none">
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  handleTouch('ultimate', true);
-                }}
-                onPointerUp={() => handleTouch('ultimate', false)}
-                onPointerLeave={() => handleTouch('ultimate', false)}
-                onPointerCancel={() => handleTouch('ultimate', false)}
-                className={`relative flex h-10 px-2.5 flex-col items-center justify-center border-2 font-mono-tech backdrop-blur-[2px] transition-all ${
-                  ultimateReady
-                    ? 'border-amber-300 bg-amber-600/75 text-white animate-pulse shadow-[0_0_12px_rgba(251,191,36,0.45)]'
-                    : 'border-amber-400/20 bg-[#060912]/45 text-amber-200/45'
-                }`}
-                aria-label="Ultimate Technique"
-              >
-                <span className="text-[10px] font-bold leading-none">奥義</span>
-                <span className="mt-0.5 text-[8px] uppercase tracking-wider">Ult</span>
-              </button>
-              <button
-                type="button"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  handleTouch('breath', true);
-                }}
-                onPointerUp={() => handleTouch('breath', false)}
-                onPointerLeave={() => handleTouch('breath', false)}
-                onPointerCancel={() => handleTouch('breath', false)}
-                className="relative flex h-10 w-13 flex-col items-center justify-center border-2 border-cyan-300/45 bg-[#06131c]/60 font-mono-tech text-cyan-100 backdrop-blur-[2px] active:border-cyan-200 active:bg-cyan-700/75"
-                aria-label="Total Concentration Breath"
-              >
-                <span className="absolute top-0.5 left-0.5 h-1 w-1 bg-cyan-300/60" />
-                <span className="text-[10px] font-bold leading-none">呼</span>
-                <span className="mt-0.5 text-[8px] uppercase tracking-wider">Breath</span>
-              </button>
-            </div>
-
-            <div className="flex items-end gap-1.5">
-              <button
-                type="button"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  handleTouch('dash', true);
-                }}
-                onPointerUp={() => handleTouch('dash', false)}
-                onPointerLeave={() => handleTouch('dash', false)}
-                onPointerCancel={() => handleTouch('dash', false)}
-                className="relative flex h-11 w-13 flex-col items-center justify-center border-2 border-amber-300/45 bg-[#171106]/60 font-mono-tech text-amber-100 backdrop-blur-[2px] active:border-amber-200 active:bg-amber-700/75"
-                aria-label="Dash"
-              >
-                <span className="absolute top-0.5 left-0.5 h-1 w-1 bg-amber-300/60" />
-                <span className="text-[11px] font-bold leading-none">疾</span>
-                <span className="mt-0.5 text-[8px] uppercase tracking-wider">Dash</span>
-              </button>
-              <button
-                type="button"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  handleTouch('slash', true);
-                }}
-                onPointerUp={() => handleTouch('slash', false)}
-                onPointerLeave={() => handleTouch('slash', false)}
-                onPointerCancel={() => handleTouch('slash', false)}
-                className="relative flex h-13 w-15 flex-col items-center justify-center border-2 border-rose-300/60 bg-[#1a0810]/65 font-mono-tech text-rose-100 backdrop-blur-[2px] active:border-white active:bg-rose-600/80"
-                aria-label="Slash and Parry"
-              >
-                <span className="absolute top-0.5 left-0.5 h-1 w-1 bg-rose-300/70" />
-                <span className="absolute bottom-0.5 right-0.5 h-1 w-1 bg-rose-300/70" />
-                <span className="text-sm font-bold leading-none">斬</span>
-                <span className="mt-0.5 text-[9px] font-bold uppercase tracking-wider">
-                  Slash
-                </span>
-              </button>
-            </div>
-          </div>
-        </>
+        <TouchControlsOverlay
+          input={engineRef.current?.input ?? null}
+          ultimateReady={ultimateReady}
+          onUnlockAudio={() => engineRef.current?.unlockAudio()}
+        />
       )}
     </div>
   );

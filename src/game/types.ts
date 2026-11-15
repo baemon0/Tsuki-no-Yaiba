@@ -43,11 +43,14 @@ export interface CameraState {
 export interface InputSnapshot {
   left: boolean;
   right: boolean;
+  moveAxis: number | null;
   downHeld: boolean;
+  dropPressed: boolean;
   jumpHeld: boolean;
   jumpPressed: boolean;
   slashPressed: boolean;
   dashPressed: boolean;
+  breathHeld: boolean;
   breathPressed: boolean;
   ultimatePressed: boolean;
 }

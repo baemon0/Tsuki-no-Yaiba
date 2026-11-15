@@ -18,20 +18,26 @@ export const ARENA_PLATFORMS: PlatformDef[] = [
 ];
 
 export const PHYSICS = {
-  gravity: 980, // px/s^2
-  maxFallSpeed: 390, // px/s
-  wallSlideMaxSpeed: 68, // px/s when holding toward screen-edge wall
-  wallJumpVx: 215, // px/s horizontal kick off wall
-  wallJumpVy: -318, // px/s vertical lift off wall
+  gravity: 960, // base px/s^2
+  ascentHeldGravityScale: 0.88, // lighter ascent while jump is held
+  apexVelocityThreshold: 80, // |vy| threshold for floaty apex hang-time
+  apexGravityScale: 0.48, // hang-time gravity multiplier at jump peak
+  fallHeldGravityScale: 0.68, // gentler descent while holding jump
+  fallGravityScale: 0.88, // natural, non-heavy descent when jump released
+  maxFallSpeed: 330, // px/s normal max fall speed
+  maxHeldFallSpeed: 235, // px/s floatier max fall speed while holding jump
+  wallSlideMaxSpeed: 64, // px/s when holding toward screen-edge wall
+  wallJumpVx: 225, // px/s horizontal kick off wall
+  wallJumpVy: -395, // px/s vertical lift off wall
   moveSpeed: 128, // px/s
   groundAccel: 1350, // px/s^2
   groundDecel: 1450, // px/s^2
-  airAccel: 860, // px/s^2
-  airDecel: 520, // px/s^2
-  jumpVelocity: -316, // px/s (clears 42px+ platform height cleanly)
-  jumpCutMultiplier: 0.48, // variable jump height on early release
-  coyoteTime: 0.085, // seconds after leaving ground/platform
-  jumpBufferTime: 0.1, // seconds before landing
+  airAccel: 920, // px/s^2
+  airDecel: 480, // px/s^2
+  jumpVelocity: -412, // px/s (~30% higher impulse, clears multi-level platforms)
+  jumpCutMultiplier: 0.56, // smooth variable jump height on early release
+  coyoteTime: 0.1, // seconds after leaving ground/platform
+  jumpBufferTime: 0.11, // seconds before landing
 } as const;
 
 export const SLASH = {
